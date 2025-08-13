@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeatherVibe</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        overflow: hidden;
+        transition: background 0.5s ease;
+        color: white;
+        text-align: center;
+    }
+    .home, .main {
+        display: none;
+        height: 100vh;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        padding: 20px;
+    }
+    .home.active, .main.active {
+        display: flex;
+    }
+    button {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid white;
+        color: white;
+        padding: 10px 20px;
+        cursor: pointer;
+        border-radius: 20px;
+        font-size: 16px;
+        margin-top: 20px;
+    }
+    input {
+        padding: 10px;
+        border: none;
+        border-radius: 20px;
+        font-size: 16px;
+        margin-bottom: 20px;
+        width: 200px;
+        text-align: center;
+    }
+    .rain, .snow, .stars {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+    }
+    .raindrop {
+        position: absolute;
+        width: 2px; height: 15px;
+        background: rgba(174, 194, 224, 0.6);
+        animation: fall linear infinite;
+    }
+    @keyframes fall {
+        to { transform: translateY(100vh); }
+    }
+</style>
+</head>
+<body>
+
+<!-- Home Page -->
+<div class="home active" id="homePage">
+    <h1 id="homeWeather">Loading weather...</h1>
+    <button onclick="enterApp()">Enter</button>
+</div>
+
+<!-- Main Page -->
+<div class="main" id="mainPage">
+    <input type="text" id="searchBox" placeholder="Search city...">
+    <h2 id="location"></h2>
+    <p id="temperature"></p>
+    <p id="description"></p>
+</div>
+
+<script>
+const backendBaseURL = "http://localhost:8000"; // Change to your backend URL
+let cachedWeather = null;
+
+function applyWeatherEffect(condition) {
+    document.querySelectorAll('.rain, .snow, .stars').forEach(e => e.remove());
+
+    if (condition === "rain") {
+        const rain = document.createElement("div");
+        rain.className = "rain";
+        for (let i = 0; i < 100; i++) {
+            const drop = document.createElement("div");
+            drop.className = "raindrop";
+            drop.style.left = Math.random() * 100 + "%";
+            drop.style.animationDuration = (Math.random() * 0.5 + 0.5) + "s";
+            drop.style.animationDelay = Math.random() * 2 + "s";
+            rain.appendChild(drop);
+        }
+        document.body.appendChild(rain);
+        document.body.style.background = "linear-gradient(#4b79a1, #283e51)";
+    }
+    else if (condition === "clear") {
+        document.body.style.background = "linear-gradient(#f093fb, #f5576c, #ffd23f)";
+    }
+    else if (condition === "clouds") {
+        document.body.style.background = "linear-gradient(#bdc3c7, #2c3e50)";
+    }
+    else if (condition === "snow") {
+        document.body.style.background = "linear-gradient(#e6ddd4, #d5d4d0)";
+    }
+}
+
+function fetchWeatherByCoords(lat, lon) {
+    fetch(`${backendBaseURL}/api/weather?lat=${lat}&lon=${lon}`)
+        .then(res => res.json())
+        .then(data => {
+            cachedWeather = data;
+            document.getElementById("homeWeather").innerText =
+                `${data.location} - ${Math.round(data.temperature)}° - ${data.description}`;
+            applyWeatherEffect(data.weather_condition.toLowerCase());
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById("homeWeather").innerText = "Unable to fetch weather.";
+        });
+}
+
+function fetchWeatherByCity(city) {
+    fetch(`${backendBaseURL}/api/weather?city=${encodeURIComponent(city)}`)
+        .then(res => res.json())
+        .then(data => {
+            cachedWeather = data;
+            document.getElementById("location").innerText = data.location;
+            document.getElementById("temperature").innerText = `${Math.round(data.temperature)}°C`;
+            document.getElementById("description").innerText = data.description;
+            applyWeatherEffect(data.weather_condition.toLowerCase());
+        })
+        .catch(err => {
+            console.error(err);
+            alert("City not found.");
+        });
+}
+
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+        pos => fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude),
+        err => fetchWeatherByCoords(51.5074, -0.1278) // London default
+    );
+} else {
+    fetchWeatherByCoords(51.5074, -0.1278);
+}
+
+function enterApp() {
+    document.getElementById("homePage").classList.remove("active");
+    document.getElementById("mainPage").classList.add("active");
+
+    if (cachedWeather) {
+        document.getElementById("location").innerText = cachedWeather.location;
+        document.getElementById("temperature").innerText = `${Math.round(cachedWeather.temperature)}°C`;
+        document.getElementById("description").innerText = cachedWeather.description;
+    }
+}
+
+document.getElementById("searchBox").addEventListener("keypress", e => {
+    if (e.key === "Enter") {
+        fetchWeatherByCity(e.target.value);
+    }
+});
+</script>
+</body>
+</html>
