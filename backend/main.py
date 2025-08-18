@@ -6,7 +6,8 @@ import models
 from database import engine, SessionLocal
 from typing import Annotated, Optional
 from datetime import datetime
-
+import schemas 
+import auth
 app = FastAPI()
 
 # Add CORS middleware for frontend integration
@@ -33,6 +34,28 @@ API_KEY = "773a0992787da586db91716599bbe15b"
 
 BASE_URL = "http://api.openweathermap.org/data/2.5/weather"
 GEO_URL = "http://api.openweathermap.org/geo/1.0/reverse"
+
+
+
+@app.post("/create-user")
+
+def create_user(data:schemas.UserCreate , db:db_dependency):
+   if db.query(models.User).filter(models.User.email ==data.email.lower()).first():
+       raise HTTPException(status_code=400, detail="Email already exists")
+   user = models.User(email = data.email.lower() , password =auth.hash_password(data.password))
+   db.add(user)
+   db.commit()
+   db.refresh(user)
+   return{"message":"user created successfully"}
+
+
+@app.post("/login-user" , response_model=schemas.Token)
+def logging_user(data:schemas.UserLogin , db:db_dependency):
+    user = db.query(models.User).filter(models.User.email==data.email.lower()).first()
+    if not user or auth.verify_password(data.password , user.password):
+        raise HTTPException(status_code=400 , detail="Invalid credentials")
+    return {"access_token": auth.create_jwt(data.email.lower())}
+   
 
 def is_daytime(sunrise: int, sunset: int, current_time: int) -> bool:
     

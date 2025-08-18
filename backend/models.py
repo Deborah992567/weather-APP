@@ -13,3 +13,10 @@ class WeatherApp(Base):
     temperature = Column(Float)
     last_updated = Column(DateTime , default=datetime.utcnow)
  
+ 
+ 
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer , primary_key=True , index=True)
+    email = Column(String)
+    password = Column(String)
