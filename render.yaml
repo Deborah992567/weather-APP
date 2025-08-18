@@ -1,8 +1,9 @@
 services:
   # A Docker web service
   - type: web
-    name: fastapi-example
+    name: WEATHER-API
     runtime: python
+    rootDir: backend
     plan: free
     autoDeploy: false
     buildCommand: pip install -r requirements.txt
